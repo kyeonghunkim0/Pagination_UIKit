@@ -7,14 +7,9 @@
 
 import Foundation
 
-struct User: Decodable {
-    let imageURL: String
-    let nickName: String
-    let link: String
-    
-    enum Codingkeys: String, CodingKey {
-        case imageURL = "avatar_url"
-        case nickName = "login"
-        case link = "html_url"
-    }
+struct User: Decodable, Hashable, Identifiable {
+    let id: Int
+    let login: String
+    let avatar_url: String
+    let html_url: String
 }

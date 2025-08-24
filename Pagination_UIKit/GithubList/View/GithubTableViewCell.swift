@@ -73,7 +73,7 @@ final class GithubTableViewCell: UITableViewCell {
     func configure(with user: User) {
         //TODO: 이미지 작업 필요
 //        thumbnailImageView.image = UIImage(data: user.imageURL)
-        nameLabel.text = user.nickName
-        linkLabel.text = user.link
+        nameLabel.text = user.login
+        linkLabel.text = user.html_url
     }
 }
