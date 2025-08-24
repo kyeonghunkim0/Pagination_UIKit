@@ -6,22 +6,23 @@
 //
 
 import UIKit
+import Combine
 
 final class GithubTableViewCell: UITableViewCell {
     
     static let identifier: String = "GithubTableViewCell"
     
+    private var cancellable = Set<AnyCancellable>()
+    
     private let thumbnailImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFit
-        imageView.image = UIImage(systemName: "person")
         return imageView
     }()
     
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.font = .systemFont(ofSize: 17, weight: .medium)
-        label.text = "mojombo"
         return label
     }()
     
@@ -29,7 +30,6 @@ final class GithubTableViewCell: UITableViewCell {
         let label = UILabel()
         label.font = .systemFont(ofSize: 12, weight: .regular)
         label.textColor = .secondaryLabel
-        label.text = "https://github.com/mojombo"
         label.numberOfLines = 0
         return label
     }()
@@ -72,7 +72,18 @@ final class GithubTableViewCell: UITableViewCell {
     
     func configure(with user: User) {
         //TODO: 이미지 작업 필요
-//        thumbnailImageView.image = UIImage(data: user.imageURL)
+        if let thumbnailURL = URL(string: user.avatar_url) {
+            let imageLoader = ImageLoader()
+            imageLoader.loadImage(from: thumbnailURL)
+                .receive(on: DispatchQueue.main)
+                .sink { [weak self] image in
+                    self?.thumbnailImageView.image = image
+                }
+                .store(in: &cancellable)
+        } else {
+            thumbnailImageView.image = UIImage(systemName: "person")
+        }
+        
         nameLabel.text = user.login
         linkLabel.text = user.html_url
     }

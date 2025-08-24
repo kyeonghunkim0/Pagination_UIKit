@@ -1,0 +1,78 @@
+//
+//  ImageCache.swift
+//  Pagination_UIKit
+//
+//  Created by 김경훈 on 8/24/25.
+//
+
+import UIKit
+
+extension UIImage {
+    func decodedImage() -> UIImage {
+          guard let cgImage = cgImage else { return self }
+          let size = CGSize(width: cgImage.width, height: cgImage.height)
+          let colorSpace = CGColorSpaceCreateDeviceRGB()
+          let context = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8, bytesPerRow: cgImage.bytesPerRow, space: colorSpace, bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue)
+          context?.draw(cgImage, in: CGRect(origin: .zero, size: size))
+          guard let decodedImage = context?.makeImage() else { return self }
+          return UIImage(cgImage: decodedImage)
+      }
+
+    var diskSize: Int {
+        guard let cgImage = self.cgImage else { return 0 }
+        return cgImage.bytesPerRow * cgImage.height
+    }
+}
+
+protocol ImageCacheType: AnyObject {
+    func image(for url: URL) -> UIImage?
+}
+
+final class ImageCache {
+    // 1st level(encoded images)
+    private lazy var imageCache: NSCache<AnyObject, AnyObject> = {
+        let cache = NSCache<AnyObject, AnyObject>()
+        cache.countLimit = config.countLimit
+        return cache
+    }()
+    // 2nd level(decoded images)
+    private lazy var decodedImageCache: NSCache<AnyObject, AnyObject> = {
+        let cache = NSCache<AnyObject, AnyObject>()
+        cache.countLimit = config.memoryLimit
+        return cache
+    }()
+    
+    private let lock = NSLock()
+    private let config: Config
+    
+    
+    struct Config {
+        let countLimit: Int
+        let memoryLimit: Int
+        
+        static let `default` = Config(countLimit: 100, memoryLimit: 100)
+    }
+    
+    init(config: Config = Config.default) {
+        self.config = config
+    }
+}
+
+extension ImageCache {
+    func image(for url: URL) -> UIImage? {
+        lock.lock(); defer { lock.unlock() }
+        // the best case scenario -> there is a decoded image
+        if let decodedImage = decodedImageCache.object(forKey: url as AnyObject) as? UIImage {
+            return decodedImage
+        }
+        // search for image data
+        if let image = imageCache.object(forKey: url as AnyObject) as? UIImage {
+            let decodedImage = image.decodedImage()
+            decodedImageCache.setObject(image as AnyObject,
+                                        forKey: url as AnyObject,
+                                        cost: decodedImage.diskSize)
+            return decodedImage
+        }
+        return nil
+    }
+}
