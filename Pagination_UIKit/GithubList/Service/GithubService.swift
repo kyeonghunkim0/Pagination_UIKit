@@ -20,15 +20,17 @@ final class GithubService {
         self.session = session
     }
     
-    func fetchUsers(since: Int, page: Int) async throws -> [User] {
+    func fetchUsers(since: Int?, perPage: Int) async throws -> [User] {
         var components = URLComponents()
         components.scheme = "https"
         components.host = "api.github.com"
         components.path = "/users"
         
         var queryItems: [URLQueryItem] = []
-        queryItems.append(URLQueryItem(name: "since", value: String(since)))
-        queryItems.append(URLQueryItem(name: "per_page", value: String(page)))
+        if let since = since {
+            queryItems.append(URLQueryItem(name: "since", value: String(since)))
+        }
+        queryItems.append(URLQueryItem(name: "per_page", value: String(perPage)))
         components.queryItems = queryItems
         
         guard let url = components.url else { throw URLError(.badURL) }

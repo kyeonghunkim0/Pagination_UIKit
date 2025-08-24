@@ -44,9 +44,26 @@ final class GithubViewController: UIViewController {
             }
             .store(in: &cancellable)
         
-        Task { @MainActor in
-            await viewModel.fetchUsers(since: 0, page: 10)
-        }
+        viewModel.$error
+            .compactMap { $0 }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] error in
+                let alert = UIAlertController(title: "오류",
+                                              message: error?.localizedDescription,
+                                              preferredStyle: .alert)
+                let ok = UIAlertAction(title: "확인", style: .default)
+                alert.addAction(ok)
+                
+                self?.present(alert, animated: true)
+            }
+            .store(in: &cancellable)
+        
+        viewModel.$isPaging
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] paging in self?.setFooterLoading(paging) }
+            .store(in: &cancellable)
+        
+        viewModel.loadInitial(perPage: 30)
     }
     
     func configureTableView() {
@@ -54,6 +71,7 @@ final class GithubViewController: UIViewController {
                            forCellReuseIdentifier: GithubTableViewCell.identifier)
         tableView.rowHeight = 110
         tableView.estimatedRowHeight = 110
+        tableView.prefetchDataSource = self
         
         dataSource = UITableViewDiffableDataSource<Section, User>(tableView: tableView) {
             (tableView, indexPath, user) -> UITableViewCell in
@@ -62,14 +80,18 @@ final class GithubViewController: UIViewController {
             cell.configure(with: user)
             return cell
         }
-        
-        var snapshot = NSDiffableDataSourceSnapshot<Section, User>()
-        snapshot.appendSections([.user])
-        snapshot.appendItems(viewModel.users, toSection: .user)
-
-        self.dataSource.apply(snapshot, animatingDifferences: true)
     }
-
+    
+    private func setFooterLoading(_ loading: Bool) {
+        if loading {
+            let spinner = UIActivityIndicatorView(style: .medium)
+            spinner.startAnimating()
+            spinner.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width, height: 44)
+            tableView.tableFooterView = spinner
+        } else {
+            tableView.tableFooterView = UIView(frame: .zero)
+        }
+    }
     
     private func applySnapshot(_ users: [User], animated: Bool = true) {
         var snapShot = NSDiffableDataSourceSnapshot<Section, User>()
@@ -77,5 +99,12 @@ final class GithubViewController: UIViewController {
         
         snapShot.appendItems(viewModel.users, toSection: .user)
         dataSource.apply(snapShot, animatingDifferences: animated)
+    }
+}
+
+extension GithubViewController: UITableViewDataSourcePrefetching {
+    func tableView(_ tableView: UITableView, prefetchRowsAt indexPaths: [IndexPath]) {
+        let maxIndex = indexPaths.map(\.row).max() ?? 0
+        viewModel.load(currentIndex: maxIndex, perPage: 30)
     }
 }
