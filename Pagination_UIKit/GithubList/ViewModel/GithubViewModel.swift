@@ -8,9 +8,11 @@
 
 import Foundation
 import Combine
+import UIKit
+
 
 @MainActor
-final class GithubViewModel {
+final class GithubViewModel: ObservableObject {
     
     @Published private(set) var users: [User] = []
     @Published private(set) var isLoading: Bool = false
@@ -22,6 +24,7 @@ final class GithubViewModel {
     private var nextSince: Int? = nil                   // 마지막으로 받은 id
     private var hasMore = true
     private var currentTask: Task<Void, Never>?
+    private let imageLoader = ImageLoader()
     
     init(service: GithubService = GithubService()) {
         self.service = service
@@ -78,5 +81,16 @@ final class GithubViewModel {
     
     func cancel() {
         currentTask?.cancel()
+    }
+    // MARK: - Image
+    func imagePublisher(for user: User) -> AnyPublisher<UIImage, Never> {
+        guard let url = URL(string: user.avatar_url) else {
+            let fallback = UIImage(systemName: "person") ?? UIImage()
+            return Just(fallback).eraseToAnyPublisher()
+        }
+        
+        return imageLoader.loadImage(from: url)
+            .map { $0 ?? UIImage(systemName: "person") ?? UIImage() }
+            .eraseToAnyPublisher()
     }
 }

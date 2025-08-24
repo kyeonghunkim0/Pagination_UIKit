@@ -70,20 +70,22 @@ final class GithubTableViewCell: UITableViewCell {
         ])
     }
     
-    func configure(with user: User) {
-        //TODO: 이미지 작업 필요
-        if let thumbnailURL = URL(string: user.avatar_url) {
-            let imageLoader = ImageLoader()
-            imageLoader.loadImage(from: thumbnailURL)
-                .receive(on: DispatchQueue.main)
-                .sink { [weak self] image in
-                    self?.thumbnailImageView.image = image
-                }
-                .store(in: &cancellable)
-        } else {
-            thumbnailImageView.image = UIImage(systemName: "person")
-        }
-        
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        cancellable.removeAll()
+        thumbnailImageView.image = nil
+        nameLabel.text = nil
+        linkLabel.text = nil
+    }
+    
+    func configure(with user: User, viewModel: GithubViewModel) {
+        viewModel.imagePublisher(for: user)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] image in
+                self?.thumbnailImageView.image = image
+            }
+            .store(in: &cancellable)
+
         nameLabel.text = user.login
         linkLabel.text = user.html_url
     }

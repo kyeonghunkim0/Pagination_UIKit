@@ -77,7 +77,7 @@ final class GithubViewController: UIViewController {
             (tableView, indexPath, user) -> UITableViewCell in
             guard let cell = tableView.dequeueReusableCell(withIdentifier: GithubTableViewCell.identifier, for: indexPath) as? GithubTableViewCell else { return UITableViewCell() }
             
-            cell.configure(with: user)
+            cell.configure(with: user, viewModel: self.viewModel)
             return cell
         }
     }
