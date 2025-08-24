@@ -69,4 +69,11 @@ final class GithubTableViewCell: UITableViewCell {
             linkLabel.trailingAnchor.constraint(equalTo: self.trailingAnchor, constant: -d)
         ])
     }
+    
+    func configure(with user: User) {
+        //TODO: 이미지 작업 필요
+//        thumbnailImageView.image = UIImage(data: user.imageURL)
+        nameLabel.text = user.nickName
+        linkLabel.text = user.link
+    }
 }
